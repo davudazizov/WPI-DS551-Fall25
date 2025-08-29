@@ -14,7 +14,7 @@ from td import *
     typing 'nosetests -v td_test.py' in the terminal
 """
 
-env = gym.make('CliffWalking-v0')
+env = gym.make('CliffWalking-v1')
 #---------------------------------------------------------------
 
 
