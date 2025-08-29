@@ -9,7 +9,7 @@ import argparse
 import numpy as np
 from environment import Environment
 import time
-from gymnasium.wrappers.monitoring import video_recorder
+from gymnasium.wrappers import RecordVideo
 from tqdm import tqdm
 
 seed = 11037
@@ -18,9 +18,13 @@ def test(agent, env, total_episodes=100, record_video=False):
     rewards = []
     env.seed(seed)
 
-    vid = None  # Initialize vid to None to ensure it's accessible outside the if block
     if record_video:
-        vid = video_recorder.VideoRecorder(env=env.env, path="test_vid.mp4")
+       env.env = RecordVideo(
+       env.env,
+       video_folder="./videos",        # 
+       name_prefix="test_vid",
+       episode_trigger=lambda ep_id: True  # record video for every episode
+         )
     start_time = time.time()
     
     
@@ -37,17 +41,13 @@ def test(agent, env, total_episodes=100, record_video=False):
                 action = agent.make_action(state, test=True)
                 state, reward, terminated, truncated, info = env.step(action)
                 episode_reward += reward
-
-                if record_video:
-                    vid.capture_frame()
+       
 
             if truncated:
                 break
 
         rewards.append(episode_reward)
 
-    if record_video:
-        vid.close()  # Ensure the video recorder is properly closed
 
     env.close()
 
