@@ -3,6 +3,7 @@
 # Modified By Yanhua Li on 09/05/2022
 # Modified By Yanhua Li on 09/09/2022 for gym==0.25.2
 # Modified By Yanhua Li on 08/19/2023 for gymnasium==0.29.0
+# Modified By Yanhua Li and Fanxi Kong on 08/2025 for gymnasium==1.20.0
 #
 from mdp_dp import *
 import gymnasium as gym
