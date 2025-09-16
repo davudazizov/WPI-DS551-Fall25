@@ -3,8 +3,17 @@
 # Modified By Yanhua Li on 09/09/2022 for gym==0.25.2
 # Modified By Yanhua Li on 08/19/2023 for gymnasium==0.29.0
 import numpy as np
+import gymnasium as gym
+import time
 
 np.set_printoptions(precision=3)
+
+env=gym.make("FrozenLake-v1", render_mode="human", is_slippery = False)
+# env.reset()
+
+# env.render()
+
+# time.sleep(5)
 
 """
 For policy_evaluation, policy_improvement, policy_iteration and value_iteration,
@@ -51,10 +60,23 @@ def policy_evaluation(P, nS, nA, policy, gamma=0.9, tol=1e-8):
     """
     
     value_function = np.zeros(nS)
-    ############################
-    # YOUR IMPLEMENTATION HERE #
-    #                          #
-    ############################
+    while True:
+        delta=0.0
+        for s in range(nS):
+            v = value_function[s]
+            v_new=0.0
+            
+            for a in range(nA):
+                psa= policy[s,a]
+                if psa == 0.0:
+                    continue
+                for (p, s_next, r, boolean) in P[s][a]:
+                    v_new += psa*p*(r+gamma*value_function[s_next])
+            value_function[s] = v_new
+            delta=max(delta, abs(v-v_new))
+            
+        if delta < tol:
+            break
     return value_function 
 
 
@@ -75,11 +97,18 @@ def policy_improvement(P, nS, nA, value_from_policy, gamma=0.9):
         given value function.
     """
 
-    new_policy = np.ones([nS, nA]) / nA # policy as a uniform distribution
-	############################
-	# YOUR IMPLEMENTATION HERE #
-    #                          #
-	############################
+    new_policy = np.zeros((nS,nA))
+    
+    for s in range(nS):
+        qsa = np.zeros(nA)
+        for a in range(nA):
+            for (p,s_next,r,boolean) in P[s][a]:
+                qsa[a] += p*(r+gamma*value_from_policy[s_next])
+                
+        best_action = np.argmax(qsa)
+        
+        new_policy[s,best_action] = 1.0
+   
     return new_policy
 
 
@@ -102,11 +131,16 @@ def policy_iteration(P, nS, nA, policy, gamma=0.9, tol=1e-8):
     V: np.ndarray[nS]
     """
     new_policy = policy.copy()
-	############################
-	# YOUR IMPLEMENTATION HERE #
-    #                          #
-	############################
-    return new_policy, V
+    while True:
+        V = policy_evaluation(P,nS,nA, new_policy, gamma=0.9, tol=1e-8)
+        improved_policy = policy_improvement(P,nS,nA, V, gamma=0.9)
+        
+        previous_actions = np.argmax(new_policy, axis=1)
+        new_actions=np.argmax(improved_policy, axis=1)
+        if np.array_equal(previous_actions, new_actions):
+            return improved_policy, V
+        new_policy=improved_policy
+    
 
 def value_iteration(P, nS, nA, V, gamma=0.9, tol=1e-8):
     """
@@ -126,13 +160,26 @@ def value_iteration(P, nS, nA, V, gamma=0.9, tol=1e-8):
     policy_new: np.ndarray[nS,nA]
     V_new: np.ndarray[nS]
     """
-    V_new = V.copy()
-    policy_new = np.zeros([nS, nA])
-    ############################
-    # YOUR IMPLEMENTATION HERE #
-    #                          #
-    ############################
-    return policy_new, V_new
+    V = np.zeros(nS)
+    while True:
+        delta = 0
+        for s in range(nS):
+            qsa = []
+            for a in range(nA):
+                q = 0
+                for p, s_next, r, done in P[s][a]:
+                    q += p * (r + gamma * V[s_next])
+                qsa.append(q)
+            v_new = max(qsa)
+            delta = max(delta, abs(V[s] - v_new))
+            V[s] = v_new
+        if delta < tol:
+            break
+
+    # Reuse policy_improvement to extract optimal policy
+    policy = policy_improvement(P, nS, nA, V, gamma)
+    return policy, V
+
 
 def render_single(env, policy, render = False, n_episodes=100):
     """
@@ -159,12 +206,9 @@ def render_single(env, policy, render = False, n_episodes=100):
         while not done: # using "not truncated" as well, when using time_limited wrapper.
             if render:
                 env.render() # render the game
-            ############################
-            # YOUR IMPLEMENTATION HERE #
-            #                          #
-            ############################
-            
+            action = np.argmax(policy[ob])
+            ob, reward, done, truncated, _ = env.step(action)
+            total_rewards += reward
+            if truncated:          # end episode if time-limited
+                break
     return total_rewards
-
-
-
