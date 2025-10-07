@@ -209,6 +209,6 @@ def render_single(env, policy, render = False, n_episodes=100):
             action = np.argmax(policy[ob])
             ob, reward, done, truncated, _ = env.step(action)
             total_rewards += reward
-            if truncated:          # end episode if time-limited
+            if truncated:         
                 break
     return total_rewards

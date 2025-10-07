@@ -9,6 +9,7 @@ Created on Fri Aug 23 16:11:22 2019
 import numpy as np
 import random
 from collections import defaultdict
+import gymnasium as gym 
 #-------------------------------------------------------------------------
 '''
     Monte-Carlo
@@ -20,6 +21,7 @@ from collections import defaultdict
 '''
 #-------------------------------------------------------------------------
 
+gym.make('Blackjack-v1', natural=False, sab=False)
 
 def initial_policy(observation):
     """A policy that sticks if the player score is >= 20 and hit otherwise
@@ -33,10 +35,12 @@ def initial_policy(observation):
         0: STICK
         1: HIT
     """
-    ############################
-    # YOUR IMPLEMENTATION HERE #
-    #                          #
-    ############################
+    player_current_sum = observation[0]
+    if player_current_sum >= 20:
+        action = 0
+    else:
+        action = 1    
+    
     return action
 
 
@@ -65,11 +69,36 @@ def mc_prediction(policy, env, n_episodes, gamma=1.0):
     # a nested dictionary that maps state -> value
     V = defaultdict(float)
 
-    ############################
-    # YOUR IMPLEMENTATION HERE #
-    #                          #
-    ############################
+    for episode_num in range(n_episodes):
+        episode=[]
+        state, _= env.reset()
+        while True:
+            action=policy(state)
+            next_state,reward,terminated,_,_=env.step(action)
+            done=terminated
+            
+            episode.append((state, action, reward))
+            state=next_state
+            
+            if done:
+                break
+            
+        G = 0
+        visited_states=set()
+        for t in range(len(episode)-1, -1, -1):
+            state, action, reward = episode[t]
 
+            G = gamma * G + reward
+
+            if state not in visited_states:
+                
+                returns_sum[state] += G
+                returns_count[state] += 1
+
+                V[state] = returns_sum[state] / returns_count[state]
+
+                visited_states.add(state)
+                
     return V
 
 
@@ -97,10 +126,15 @@ def epsilon_greedy(Q, state, nA, epsilon=0.1):
     With probability (1 - epsilon) choose the greedy action.
     With probability epsilon choose an action at random.
     """
-    ############################
-    # YOUR IMPLEMENTATION HERE #
-    #                          #
-    ############################
+    
+    
+    q_values = Q[state] if state in Q else np.zeros(nA)
+
+    if random.random() < (1.0 - epsilon):
+        action = int(np.argmax(q_values))
+    else:
+        action = int(random.randrange(nA))
+    
     return action
 
 
@@ -135,9 +169,31 @@ def mc_control_epsilon_greedy(env, n_episodes, gamma=1.0, epsilon=0.1):
     # e.g. Q[state] = np.darrary(nA)
     Q = defaultdict(lambda: np.zeros(env.action_space.n))
 
-    ############################
-    # YOUR IMPLEMENTATION HERE #
-    #                          #
-    ############################
+    for episode_num in range(n_episodes):
+        nA = env.action_space.n           
+        episode=[]
+        state, _= env.reset()
+        while True:
+            action=epsilon_greedy(Q,state, nA, epsilon)
+            next_state,reward,terminated,_,_=env.step(action)
+            done=terminated
+            
+            episode.append((state, action, reward))
+            state=next_state
+            
+            if done:
+                break
+            
+        G = 0
+        visited_states=set()
+        for t in range(len(episode)-1, -1, -1):
+            state, action, reward = episode[t]
+
+            G = gamma * G + reward
+            if state not in visited_states:
+                returns_sum[(state, action)]+=G
+                returns_count[(state,action)]+=1
+                Q[state][action]=returns_sum[(state, action)]/returns_count[(state, action)]
+                visited_states.add((state,action))
 
     return Q
